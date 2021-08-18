@@ -71,7 +71,7 @@ func (asol *Asol) Start() {
 		asol.onOpen(asol)
 		asol.poll("/riotclient/region-locale")
 		asol.onReady(asol)
-		asol.poll("/lol-login/v1/asol")
+		asol.poll("/lol-login/v1/session")
 		asol.onLogin(asol)
 		var path string = asol.Path()
 		asol.listen()

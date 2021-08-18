@@ -3,7 +3,6 @@ package asol
 import (
 	"context"
 	"encoding/csv"
-	"fmt"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -128,18 +127,13 @@ func IsGameOrClient(channel chan bool, game string, client string) {
 		defer wg.Done()
 
 		for {
-			fmt.Println("Game: For loop")
-
 			if len(channel) == cap(channel) {
-				fmt.Println("Game: Channel is full.")
 				break
 			}
 
 			process, _ := GetProcess(game)
 
 			if process != nil {
-				fmt.Println("Game: <- true")
-
 				channel <- true
 				break
 			}
@@ -149,7 +143,6 @@ func IsGameOrClient(channel chan bool, game string, client string) {
 
 		select {
 		case <-ctx.Done():
-			fmt.Println("Game: Returning from ctx.Done()")
 			return
 		}
 	}()
@@ -158,18 +151,13 @@ func IsGameOrClient(channel chan bool, game string, client string) {
 		defer wg.Done()
 
 		for {
-			fmt.Println("Client: For loop")
-
 			if len(channel) == cap(channel) {
-				fmt.Println("Client: Channel is full.")
 				break
 			}
 
 			process, err := GetProcess(client)
 
 			if process == nil || err != nil {
-				fmt.Println("Client: <- false")
-
 				channel <- false
 				break
 			}
@@ -179,13 +167,11 @@ func IsGameOrClient(channel chan bool, game string, client string) {
 
 		select {
 		case <-ctx.Done():
-			fmt.Println("Client: Returning from ctx.Done()")
 			return
 		}
 	}()
 
 	go func() {
-		fmt.Println("The 3rd goroutine ran")
 		defer wg.Done()
 		cancel()
 	}()

@@ -38,7 +38,7 @@ func NewRiotClient() *RiotClient {
 				TLSHandshakeTimeout:   5 * time.Second,
 				ResponseHeaderTimeout: 5 * time.Second,
 				ExpectContinueTimeout: 5 * time.Second,
-				DisableKeepAlives:     false,
+				DisableKeepAlives:     true,
 			},
 		},
 	}
@@ -57,7 +57,7 @@ func NewWebClient() *WebClient {
 				TLSHandshakeTimeout:   5 * time.Second,
 				ResponseHeaderTimeout: 5 * time.Second,
 				ExpectContinueTimeout: 5 * time.Second,
-				DisableKeepAlives:     false,
+				DisableKeepAlives:     true,
 			},
 		},
 	}
@@ -88,6 +88,7 @@ func (asol *Asol) WebsocketHeader() http.Header {
 	return http.Header{
 		"Content-Type":  []string{"application/json"},
 		"Accept":        []string{"application/json"},
+		"Connection":    []string{"close"},
 		"Authorization": {"Basic " + authorization},
 	}
 }
@@ -96,6 +97,7 @@ func (asol *Asol) WebHeader() http.Header {
 	return http.Header{
 		"Content-Type": []string{"application/json"},
 		"Accept":       []string{"application/json"},
+		"Connection":   []string{"close"},
 	}
 }
 

@@ -2,8 +2,12 @@ package asol
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,12 +50,35 @@ func (asol *Asol) respawn(path string) {
 	}
 }
 
-func (asol *Asol) poll(endpoint string) {
+func (asol *Asol) isReady() {
 	for {
-		request, _ := asol.NewGetRequest(endpoint)
+		request, _ := asol.NewGetRequest("/riotclient/region-locale")
 		_, err := asol.RiotRequest(request)
 
 		if err == nil {
+			break
+		}
+
+		time.Sleep(1000 * time.Millisecond)
+	}
+}
+
+func (asol *Asol) isLoggedIn() {
+	for {
+		request, _ := asol.NewGetRequest("/lol-login/v1/session")
+		data, err := asol.RawRequest(request)
+
+		if err != nil {
+			continue
+		}
+
+		var login Login
+		json.Unmarshal(data, &login)
+
+		connected := login.Connected
+		state := strings.ToLower(login.State)
+
+		if connected && state == "succeeded" {
 			break
 		}
 
@@ -69,9 +96,9 @@ func (asol *Asol) Start() {
 		}
 
 		asol.onOpen(asol)
-		asol.poll("/riotclient/region-locale")
+		asol.isReady()
 		asol.onReady(asol)
-		asol.poll("/lol-login/v1/session")
+		asol.isLoggedIn()
 		asol.onLogin(asol)
 		var path string = asol.Path()
 		asol.listen()
@@ -148,9 +175,16 @@ func (asol *Asol) listen() {
 	}
 
 	address := asol.WebsocketAddress()
-	header := asol.WebsocketHeader()
+	authorization := asol.Authorization()
 
-	connection, _, err := dialer.Dial(address, header)
+	connection, _, err := dialer.Dial(
+		address,
+		http.Header{
+			"Content-Type":  []string{"application/json"},
+			"Accept":        []string{"application/json"},
+			"Authorization": {"Basic " + authorization},
+		},
+	)
 
 	if err != nil {
 		asol.onError(
@@ -163,10 +197,7 @@ func (asol *Asol) listen() {
 	asol.Connection = connection
 
 	message := []interface{}{Subscribe, "OnJsonApiEvent"}
-
-	asol.mutex.Lock()
 	asol.Connection.WriteJSON(&message)
-	asol.mutex.Unlock()
 
 	_, _, err = asol.Connection.ReadMessage()
 
@@ -177,14 +208,6 @@ func (asol *Asol) listen() {
 	}
 
 	asol.read()
-
-	asol.Connection.WriteMessage(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(
-			websocket.CloseNormalClosure,
-			"",
-		),
-	)
 }
 
 func (asol *Asol) read() {
@@ -199,6 +222,10 @@ func (asol *Asol) read() {
 				asol.onWebsocketClose(asol)
 
 				break
+			}
+
+			if err == io.ErrUnexpectedEOF {
+				continue
 			}
 
 			asol.onError(

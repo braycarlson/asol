@@ -38,7 +38,7 @@ func NewRiotClient() *RiotClient {
 				TLSHandshakeTimeout:   5 * time.Second,
 				ResponseHeaderTimeout: 5 * time.Second,
 				ExpectContinueTimeout: 5 * time.Second,
-				DisableKeepAlives:     true,
+				DisableKeepAlives:     false,
 			},
 		},
 	}
@@ -57,7 +57,7 @@ func NewWebClient() *WebClient {
 				TLSHandshakeTimeout:   5 * time.Second,
 				ResponseHeaderTimeout: 5 * time.Second,
 				ExpectContinueTimeout: 5 * time.Second,
-				DisableKeepAlives:     true,
+				DisableKeepAlives:     false,
 			},
 		},
 	}
@@ -77,12 +77,12 @@ func (asol *Asol) WebsocketAddress() string {
 	return "wss://127.0.0.1:" + port
 }
 
-func (asol *Asol) WebAddress() string {
+func (asol *Asol) LocalAddress() string {
 	port := asol.Port()
 	return "https://127.0.0.1:" + port
 }
 
-func (asol *Asol) Header() http.Header {
+func (asol *Asol) WebsocketHeader() http.Header {
 	authorization := asol.Authorization()
 
 	return http.Header{
@@ -92,20 +92,38 @@ func (asol *Asol) Header() http.Header {
 	}
 }
 
+func (asol *Asol) WebHeader() http.Header {
+	return http.Header{
+		"Content-Type": []string{"application/json"},
+		"Accept":       []string{"application/json"},
+	}
+}
+
+func (asol *Asol) NewWebRequest(url string) (*http.Request, error) {
+	request, err := http.NewRequest(http.MethodGet, url, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	request.Header = asol.WebHeader()
+	return request, nil
+}
+
 func (asol *Asol) NewGetRequest(endpoint string) (*http.Request, error) {
-	uri := asol.WebAddress() + endpoint
+	uri := asol.LocalAddress() + endpoint
 	request, err := http.NewRequest(http.MethodGet, uri, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
-	request.Header = asol.Header()
+	request.Header = asol.WebsocketHeader()
 	return request, nil
 }
 
 func (asol *Asol) NewPostRequest(endpoint string, data map[string]interface{}) (*http.Request, error) {
-	uri := asol.WebAddress() + endpoint
+	uri := asol.LocalAddress() + endpoint
 	payload, err := json.Marshal(data)
 	buffer := bytes.NewBuffer(payload)
 
@@ -119,12 +137,12 @@ func (asol *Asol) NewPostRequest(endpoint string, data map[string]interface{}) (
 		return nil, err
 	}
 
-	request.Header = asol.Header()
+	request.Header = asol.WebsocketHeader()
 	return request, nil
 }
 
 func (asol *Asol) NewPatchRequest(endpoint string, data map[string]interface{}) (*http.Request, error) {
-	uri := asol.WebAddress() + endpoint
+	uri := asol.LocalAddress() + endpoint
 	payload, err := json.Marshal(data)
 	buffer := bytes.NewBuffer(payload)
 
@@ -138,19 +156,19 @@ func (asol *Asol) NewPatchRequest(endpoint string, data map[string]interface{}) 
 		return nil, err
 	}
 
-	request.Header = asol.Header()
+	request.Header = asol.WebsocketHeader()
 	return request, nil
 }
 
 func (asol *Asol) NewDeleteRequest(endpoint string) (*http.Request, error) {
-	uri := asol.WebAddress() + endpoint
+	uri := asol.LocalAddress() + endpoint
 	request, err := http.NewRequest(http.MethodDelete, uri, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
-	request.Header = asol.Header()
+	request.Header = asol.WebsocketHeader()
 	return request, nil
 }
 
@@ -184,8 +202,8 @@ func (asol *Asol) RiotRequest(request *http.Request) (interface{}, error) {
 	return data, err
 }
 
-func (asol *Asol) WebRequest(request *http.Request) ([]interface{}, error) {
-	var data []interface{}
+func (asol *Asol) WebRequest(request *http.Request) (interface{}, error) {
+	var data interface{}
 	response, err := asol.WebClient.Do(request)
 
 	if err != nil {

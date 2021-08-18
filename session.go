@@ -148,7 +148,7 @@ func (asol *Asol) listen() {
 	}
 
 	address := asol.WebsocketAddress()
-	header := asol.Header()
+	header := asol.WebsocketHeader()
 
 	connection, _, err := dialer.Dial(address, header)
 

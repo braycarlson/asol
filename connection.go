@@ -21,7 +21,7 @@ type Asol struct {
 	*WebClient
 	*ConnectionEventManager
 	*WebsocketEventManager
-	mutex     sync.Mutex
+	mutex     *sync.Mutex
 	reconnect bool
 }
 
@@ -33,7 +33,7 @@ func NewAsol() *Asol {
 		NewWebClient(),
 		&ConnectionEventManager{},
 		&WebsocketEventManager{},
-		sync.Mutex{},
+		&sync.Mutex{},
 		true,
 	}
 }
@@ -66,7 +66,7 @@ func (asol *Asol) isReady() {
 func (asol *Asol) isLoggedIn() {
 	for {
 		request, _ := asol.NewGetRequest("/lol-login/v1/session")
-		data, err := asol.RawRequest(request)
+		data, err := asol.RawRiotRequest(request)
 
 		if err != nil {
 			continue
@@ -77,8 +77,10 @@ func (asol *Asol) isLoggedIn() {
 
 		connected := login.Connected
 		state := strings.ToLower(login.State)
+		accountId := login.AccountId
+		summonerId := login.SummonerId
 
-		if connected && state == "succeeded" {
+		if connected && state == "succeeded" && accountId != 0 && summonerId != 0 {
 			break
 		}
 
@@ -91,7 +93,7 @@ func (asol *Asol) Start() {
 		err := asol.Registered()
 
 		if err != nil {
-			asol.onError(err)
+			asol.onWebsocketError(err)
 			break
 		}
 
@@ -100,6 +102,7 @@ func (asol *Asol) Start() {
 		asol.onReady(asol)
 		asol.isLoggedIn()
 		asol.onLogin(asol)
+
 		var path string = asol.Path()
 		asol.listen()
 
@@ -187,7 +190,7 @@ func (asol *Asol) listen() {
 	)
 
 	if err != nil {
-		asol.onError(
+		asol.onWebsocketError(
 			fmt.Errorf("%v", err),
 		)
 
@@ -196,16 +199,20 @@ func (asol *Asol) listen() {
 
 	asol.Connection = connection
 
+	asol.mutex.Lock()
+
 	message := []interface{}{Subscribe, "OnJsonApiEvent"}
 	asol.Connection.WriteJSON(&message)
 
 	_, _, err = asol.Connection.ReadMessage()
 
 	if err != nil {
-		asol.onError(
+		asol.onWebsocketError(
 			fmt.Errorf("%v", err),
 		)
 	}
+
+	asol.mutex.Unlock()
 
 	asol.read()
 }
@@ -228,7 +235,7 @@ func (asol *Asol) read() {
 				continue
 			}
 
-			asol.onError(
+			asol.onWebsocketError(
 				fmt.Errorf("%v", err),
 			)
 

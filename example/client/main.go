@@ -16,35 +16,53 @@ func NewClient() *Client {
 	}
 }
 
+var (
+	client = &Client{
+		asol.NewAsol(),
+	}
+)
+
 func onOpen(asol *asol.Asol) {
-	fmt.Println("Opened")
+	fmt.Println("The client is opened")
 }
 
 func onReady(asol *asol.Asol) {
-	fmt.Println("Ready")
+	fmt.Println("The client is ready")
 }
 
 func onLogin(asol *asol.Asol) {
-	fmt.Println("Logged in")
+	fmt.Println("The client is logged in")
 }
 
 func onLogout(asol *asol.Asol) {
-	fmt.Println("Logged out")
+	fmt.Println("The client is logged out")
 }
 
 func onClientClose(asol *asol.Asol) {
-	fmt.Println("Client closed")
+	fmt.Println("The client is closed")
 }
 
 func onWebsocketClose(asol *asol.Asol) {
-	fmt.Println("Websocket closed")
+	fmt.Println("The client's websocket closed")
 }
 
 func onReconnect(asol *asol.Asol) {
-	fmt.Println("Reconnected")
+	fmt.Println("The client is reconnected")
 }
 
-func onError(error error) {
+func onRequest(uri string, status int) {
+	fmt.Println(
+		fmt.Sprintf("%d: %s", status, uri),
+	)
+}
+
+func onRequestError(uri string, status int) {
+	fmt.Println(
+		fmt.Sprintf("%d: %s", status, uri),
+	)
+}
+
+func onWebsocketError(error error) {
 	fmt.Println(error)
 }
 
@@ -57,8 +75,6 @@ func onGame(asol *asol.Asol, message *asol.Message) {
 }
 
 func main() {
-	client := NewClient()
-
 	client.OnOpen(onOpen)
 	client.OnReady(onReady)
 	client.OnLogin(onLogin)
@@ -66,7 +82,9 @@ func main() {
 	client.OnClientClose(onClientClose)
 	client.OnWebsocketClose(onWebsocketClose)
 	client.OnReconnect(onReconnect)
-	client.OnError(onError)
+	client.OnRequest(onRequest)
+	client.OnRequestError(onRequestError)
+	client.OnWebsocketError(onWebsocketError)
 
 	client.OnMessage(
 		"/lol-settings/v1/account/lol-collection-champions",

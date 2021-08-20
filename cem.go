@@ -1,8 +1,9 @@
 package asol
 
 type (
-	EventCallback func(*Asol)
-	ErrorCallback func(error)
+	EventCallback   func(*Asol)
+	RequestCallback func(string, int)
+	WebsocketError  func(error)
 
 	ConnectionEventManager struct {
 		onOpen           func(*Asol)
@@ -12,7 +13,9 @@ type (
 		onClientClose    func(*Asol)
 		onWebsocketClose func(*Asol)
 		onReconnect      func(*Asol)
-		onError          func(error)
+		onRequest        func(string, int)
+		onRequestError   func(string, int)
+		onWebsocketError func(error)
 	}
 )
 
@@ -44,6 +47,14 @@ func (asol *Asol) OnReconnect(callback EventCallback) {
 	asol.ConnectionEventManager.onReconnect = callback
 }
 
-func (asol *Asol) OnError(callback ErrorCallback) {
-	asol.ConnectionEventManager.onError = callback
+func (asol *Asol) OnRequest(callback RequestCallback) {
+	asol.ConnectionEventManager.onRequest = callback
+}
+
+func (asol *Asol) OnRequestError(callback RequestCallback) {
+	asol.ConnectionEventManager.onRequestError = callback
+}
+
+func (asol *Asol) OnWebsocketError(callback WebsocketError) {
+	asol.ConnectionEventManager.onWebsocketError = callback
 }

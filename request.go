@@ -14,17 +14,13 @@ import (
 )
 
 type (
-	RiotClient struct {
-		*http.Client
-	}
-
-	WebClient struct {
+	Client struct {
 		*http.Client
 	}
 )
 
-func NewRiotClient() *RiotClient {
-	return &RiotClient{
+func NewClient() *Client {
+	return &Client{
 		&http.Client{
 			Timeout: time.Second * 10,
 			Transport: &http.Transport{
@@ -45,23 +41,9 @@ func NewRiotClient() *RiotClient {
 	}
 }
 
-func NewWebClient() *WebClient {
-	return &WebClient{
-		&http.Client{
-			Timeout: time.Second * 10,
-			Transport: &http.Transport{
-				DialContext: (&net.Dialer{
-					Timeout:   5 * time.Second,
-					KeepAlive: 5 * time.Second,
-					DualStack: true,
-				}).DialContext,
-				TLSHandshakeTimeout:   5 * time.Second,
-				ResponseHeaderTimeout: 5 * time.Second,
-				ExpectContinueTimeout: 5 * time.Second,
-				DisableKeepAlives:     true,
-			},
-		},
-	}
+func (client *Client) setInsecureSkipVerify(insecureSkipVerify bool) {
+	tlsClientConfig := &tls.Config{InsecureSkipVerify: insecureSkipVerify}
+	client.Client.Transport.(*http.Transport).TLSClientConfig = tlsClientConfig
 }
 
 func (asol *Asol) Authorization() string {
@@ -83,53 +65,31 @@ func (asol *Asol) LocalAddress() string {
 	return "https://127.0.0.1:" + port
 }
 
-func (asol *Asol) WebsocketHeader() http.Header {
-	authorization := asol.Authorization()
-
-	return http.Header{
-		"Content-Type":  []string{"application/json"},
-		"Accept":        []string{"application/json"},
-		"Connection":    []string{"close"},
-		"Authorization": {"Basic " + authorization},
-	}
-}
-
-func (asol *Asol) WebHeader() http.Header {
+func (asol *Asol) Header() http.Header {
 	return http.Header{
 		"Content-Type": []string{"application/json"},
 		"Accept":       []string{"application/json"},
-		"Connection":   []string{"close"},
 	}
 }
 
-func (asol *Asol) NewGetRequest(uri string) (*http.Request, error) {
-	var header http.Header
-
+func (asol *Asol) Get(uri string) (*http.Request, error) {
 	if strings.HasPrefix(uri, "/") {
 		uri = asol.LocalAddress() + uri
-		header = asol.WebsocketHeader()
-	} else {
-		header = asol.WebHeader()
 	}
 
 	request, err := http.NewRequest(http.MethodGet, uri, nil)
+	request.Header = asol.Header()
 
 	if err != nil {
 		return nil, err
 	}
 
-	request.Header = header
 	return request, nil
 }
 
-func (asol *Asol) NewPostRequest(uri string, data map[string]interface{}) (*http.Request, error) {
-	var header http.Header
-
+func (asol *Asol) Post(uri string, data map[string]interface{}) (*http.Request, error) {
 	if strings.HasPrefix(uri, "/") {
 		uri = asol.LocalAddress() + uri
-		header = asol.WebsocketHeader()
-	} else {
-		header = asol.WebHeader()
 	}
 
 	payload, err := json.Marshal(data)
@@ -140,23 +100,18 @@ func (asol *Asol) NewPostRequest(uri string, data map[string]interface{}) (*http
 	}
 
 	request, err := http.NewRequest(http.MethodPost, uri, buffer)
+	request.Header = asol.Header()
 
 	if err != nil {
 		return nil, err
 	}
 
-	request.Header = header
 	return request, nil
 }
 
-func (asol *Asol) NewPatchRequest(uri string, data map[string]interface{}) (*http.Request, error) {
-	var header http.Header
-
+func (asol *Asol) Patch(uri string, data map[string]interface{}) (*http.Request, error) {
 	if strings.HasPrefix(uri, "/") {
 		uri = asol.LocalAddress() + uri
-		header = asol.WebsocketHeader()
-	} else {
-		header = asol.WebHeader()
 	}
 
 	payload, err := json.Marshal(data)
@@ -167,23 +122,18 @@ func (asol *Asol) NewPatchRequest(uri string, data map[string]interface{}) (*htt
 	}
 
 	request, err := http.NewRequest(http.MethodPatch, uri, buffer)
+	request.Header = asol.Header()
 
 	if err != nil {
 		return nil, err
 	}
 
-	request.Header = header
 	return request, nil
 }
 
-func (asol *Asol) NewPutRequest(uri string, data map[string]interface{}) (*http.Request, error) {
-	var header http.Header
-
+func (asol *Asol) Put(uri string, data map[string]interface{}) (*http.Request, error) {
 	if strings.HasPrefix(uri, "/") {
 		uri = asol.LocalAddress() + uri
-		header = asol.WebsocketHeader()
-	} else {
-		header = asol.WebHeader()
 	}
 
 	payload, err := json.Marshal(data)
@@ -194,61 +144,33 @@ func (asol *Asol) NewPutRequest(uri string, data map[string]interface{}) (*http.
 	}
 
 	request, err := http.NewRequest(http.MethodPut, uri, buffer)
+	request.Header = asol.Header()
 
 	if err != nil {
 		return nil, err
 	}
 
-	request.Header = header
 	return request, nil
 }
 
-func (asol *Asol) NewDeleteRequest(uri string) (*http.Request, error) {
-	var header http.Header
-
+func (asol *Asol) Delete(uri string) (*http.Request, error) {
 	if strings.HasPrefix(uri, "/") {
 		uri = asol.LocalAddress() + uri
-		header = asol.WebsocketHeader()
-	} else {
-		header = asol.WebHeader()
 	}
 
 	request, err := http.NewRequest(http.MethodDelete, uri, nil)
+	request.Header = asol.Header()
 
 	if err != nil {
 		return nil, err
 	}
 
-	request.Header = header
 	return request, nil
 }
 
-func (asol *Asol) RiotRequest(request *http.Request) (interface{}, error) {
-	var data interface{}
-	response, err := asol.RiotClient.Do(request)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer response.Body.Close()
-
-	uri := request.URL.RequestURI()
-	status := response.StatusCode >= 200 && response.StatusCode < 300
-
-	if status {
-		asol.onRequest(uri, response.StatusCode)
-	} else {
-		asol.onRequestError(uri, response.StatusCode)
-	}
-
-	json.NewDecoder(response.Body).Decode(&data)
-	return data, err
-}
-
 func (asol *Asol) WebRequest(request *http.Request) (interface{}, error) {
-	var data interface{}
-	response, err := asol.WebClient.Do(request)
+	asol.Client.setInsecureSkipVerify(false)
+	response, err := asol.Client.Do(request)
 
 	if err != nil {
 		return nil, err
@@ -256,36 +178,25 @@ func (asol *Asol) WebRequest(request *http.Request) (interface{}, error) {
 
 	defer response.Body.Close()
 
-	uri := request.URL.RequestURI()
-	status := response.StatusCode >= 200 && response.StatusCode < 300
-
-	if status {
-		asol.onRequest(uri, response.StatusCode)
-	} else {
-		asol.onRequestError(uri, response.StatusCode)
-	}
+	var data interface{}
 
 	json.NewDecoder(response.Body).Decode(&data)
 	return data, err
 }
 
-func (asol *Asol) RawRiotRequest(request *http.Request) ([]byte, error) {
-	response, err := asol.RiotClient.Do(request)
+func (asol *Asol) RiotRequest(request *http.Request) ([]byte, error) {
+	asol.Client.setInsecureSkipVerify(true)
+
+	authorization := asol.Authorization()
+	request.Header.Set("Authorization", "Basic "+authorization)
+
+	response, err := asol.Client.Do(request)
 
 	if err != nil {
 		return nil, err
 	}
 
 	defer response.Body.Close()
-
-	uri := request.URL.RequestURI()
-	status := response.StatusCode >= 200 && response.StatusCode < 300
-
-	if status {
-		asol.onRequest(uri, response.StatusCode)
-	} else {
-		asol.onRequestError(uri, response.StatusCode)
-	}
 
 	bytes, err := ioutil.ReadAll(
 		io.LimitReader(response.Body, 1048576),
@@ -295,22 +206,14 @@ func (asol *Asol) RawRiotRequest(request *http.Request) ([]byte, error) {
 }
 
 func (asol *Asol) RawWebRequest(request *http.Request) ([]byte, error) {
-	response, err := asol.WebClient.Do(request)
+	asol.Client.setInsecureSkipVerify(false)
+	response, err := asol.Client.Do(request)
 
 	if err != nil {
 		return nil, err
 	}
 
 	defer response.Body.Close()
-
-	uri := request.URL.RequestURI()
-	status := response.StatusCode >= 200 && response.StatusCode < 300
-
-	if status {
-		asol.onRequest(uri, response.StatusCode)
-	} else {
-		asol.onRequestError(uri, response.StatusCode)
-	}
 
 	bytes, err := ioutil.ReadAll(
 		io.LimitReader(response.Body, 1048576),

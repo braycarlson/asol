@@ -19,7 +19,7 @@ const (
 type (
 	MessageType float64
 
-	WebsocketCallback func(*Asol, *Message)
+	WebsocketCallback func(*Asol, []byte)
 
 	Message struct {
 		URI    string
@@ -65,7 +65,8 @@ func (asol *Asol) Match(message *Message) {
 	for _, listener := range asol.registered {
 		if message.URI == listener["uri"] && message.Method == listener["method"] {
 			callback := listener["callback"].(WebsocketCallback)
-			callback(asol, message)
+			response, _ := json.Marshal(message.Data)
+			callback(asol, response)
 		}
 	}
 }

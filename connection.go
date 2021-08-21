@@ -17,8 +17,7 @@ import (
 type Asol struct {
 	Connection *websocket.Conn
 	*GameProcess
-	*RiotClient
-	*WebClient
+	*Client
 	*ConnectionEventManager
 	*WebsocketEventManager
 	mutex     *sync.Mutex
@@ -29,8 +28,7 @@ func NewAsol() *Asol {
 	return &Asol{
 		&websocket.Conn{},
 		NewGameProcess(),
-		NewRiotClient(),
-		NewWebClient(),
+		NewClient(),
 		&ConnectionEventManager{},
 		&WebsocketEventManager{},
 		&sync.Mutex{},
@@ -52,7 +50,7 @@ func (asol *Asol) respawn(path string) {
 
 func (asol *Asol) isReady() {
 	for {
-		request, _ := asol.NewGetRequest("/riotclient/region-locale")
+		request, _ := asol.Get("/riotclient/region-locale")
 		_, err := asol.RiotRequest(request)
 
 		if err == nil {
@@ -65,8 +63,8 @@ func (asol *Asol) isReady() {
 
 func (asol *Asol) isLoggedIn() {
 	for {
-		request, _ := asol.NewGetRequest("/lol-login/v1/session")
-		data, err := asol.RawRiotRequest(request)
+		request, _ := asol.Get("/lol-login/v1/session")
+		data, err := asol.RiotRequest(request)
 
 		if err != nil {
 			continue
@@ -225,12 +223,6 @@ func (asol *Asol) read() {
 		err := asol.Connection.ReadJSON(&response)
 
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err) {
-				asol.onWebsocketClose(asol)
-
-				break
-			}
-
 			if err == io.ErrUnexpectedEOF {
 				continue
 			}
@@ -239,7 +231,11 @@ func (asol *Asol) read() {
 				fmt.Errorf("%v", err),
 			)
 
-			continue
+			if websocket.IsUnexpectedCloseError(err) {
+				asol.onWebsocketClose(asol)
+			}
+
+			break
 		}
 
 		asol.Match(

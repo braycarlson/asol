@@ -50,28 +50,16 @@ func onReconnect(asol *asol.Asol) {
 	fmt.Println("The client is reconnected")
 }
 
-func onRequest(uri string, status int) {
-	fmt.Println(
-		fmt.Sprintf("%d: %s", status, uri),
-	)
-}
-
-func onRequestError(uri string, status int) {
-	fmt.Println(
-		fmt.Sprintf("%d: %s", status, uri),
-	)
-}
-
 func onWebsocketError(error error) {
 	fmt.Println(error)
 }
 
-func onCollection(asol *asol.Asol, message *asol.Message) {
-	fmt.Println(message.Data)
+func onCollection(asol *asol.Asol, message []byte) {
+	fmt.Println(message)
 }
 
-func onGame(asol *asol.Asol, message *asol.Message) {
-	fmt.Println(message.Data)
+func onGame(asol *asol.Asol, message []byte) {
+	fmt.Println(message)
 }
 
 func main() {
@@ -82,8 +70,6 @@ func main() {
 	client.OnClientClose(onClientClose)
 	client.OnWebsocketClose(onWebsocketClose)
 	client.OnReconnect(onReconnect)
-	client.OnRequest(onRequest)
-	client.OnRequestError(onRequestError)
 	client.OnWebsocketError(onWebsocketError)
 
 	client.OnMessage(

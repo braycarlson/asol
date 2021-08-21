@@ -17,7 +17,7 @@ import (
 type Asol struct {
 	Connection *websocket.Conn
 	*GameProcess
-	*Client
+	*HTTPClient
 	*ConnectionEventManager
 	*WebsocketEventManager
 	mutex     *sync.Mutex
@@ -28,7 +28,7 @@ func NewAsol() *Asol {
 	return &Asol{
 		&websocket.Conn{},
 		NewGameProcess(),
-		NewClient(),
+		NewHTTPClient(),
 		&ConnectionEventManager{},
 		&WebsocketEventManager{},
 		&sync.Mutex{},
@@ -78,7 +78,8 @@ func (asol *Asol) isLoggedIn() {
 		accountId := login.AccountId
 		summonerId := login.SummonerId
 
-		if connected && state == "succeeded" && accountId != 0 && summonerId != 0 {
+		if connected && state == "succeeded" &&
+			accountId != 0 && summonerId != 0 {
 			break
 		}
 
@@ -175,15 +176,12 @@ func (asol *Asol) listen() {
 		},
 	}
 
-	address := asol.WebsocketAddress()
-	authorization := asol.Authorization()
-
 	connection, _, err := dialer.Dial(
-		address,
+		asol.WebsocketAddress(),
 		http.Header{
 			"Content-Type":  []string{"application/json"},
 			"Accept":        []string{"application/json"},
-			"Authorization": {"Basic " + authorization},
+			"Authorization": {"Basic " + asol.Authorization()},
 		},
 	)
 

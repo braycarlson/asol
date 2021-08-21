@@ -14,34 +14,37 @@ import (
 )
 
 type (
-	Client struct {
+	HTTPClient struct {
 		*http.Client
 	}
 )
 
-func NewClient() *Client {
-	return &Client{
+func NewHTTPClient() *HTTPClient {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	transport.DialContext = (&net.Dialer{
+		Timeout:   5 * time.Second,
+		KeepAlive: 5 * time.Second,
+		DualStack: true,
+	}).DialContext
+	transport.DisableKeepAlives = false
+	transport.ExpectContinueTimeout = 5 * time.Second
+	transport.MaxIdleConns = 25
+	transport.MaxConnsPerHost = 25
+	transport.MaxIdleConnsPerHost = 25
+	transport.ResponseHeaderTimeout = 5 * time.Second
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	transport.TLSHandshakeTimeout = 5 * time.Second
+
+	return &HTTPClient{
 		&http.Client{
-			Timeout: time.Second * 10,
-			Transport: &http.Transport{
-				DialContext: (&net.Dialer{
-					Timeout:   5 * time.Second,
-					KeepAlive: 5 * time.Second,
-					DualStack: true,
-				}).DialContext,
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
-				TLSHandshakeTimeout:   5 * time.Second,
-				ResponseHeaderTimeout: 5 * time.Second,
-				ExpectContinueTimeout: 5 * time.Second,
-				DisableKeepAlives:     true,
-			},
+			Timeout:   time.Second * 10,
+			Transport: transport,
 		},
 	}
 }
 
-func (client *Client) setInsecureSkipVerify(insecureSkipVerify bool) {
+func (client *HTTPClient) setInsecureSkipVerify(insecureSkipVerify bool) {
 	tlsClientConfig := &tls.Config{InsecureSkipVerify: insecureSkipVerify}
 	client.Client.Transport.(*http.Transport).TLSClientConfig = tlsClientConfig
 }
@@ -65,24 +68,19 @@ func (asol *Asol) LocalAddress() string {
 	return "https://127.0.0.1:" + port
 }
 
-func (asol *Asol) Header() http.Header {
-	return http.Header{
-		"Content-Type": []string{"application/json"},
-		"Accept":       []string{"application/json"},
-	}
-}
-
 func (asol *Asol) Get(uri string) (*http.Request, error) {
 	if strings.HasPrefix(uri, "/") {
 		uri = asol.LocalAddress() + uri
 	}
 
 	request, err := http.NewRequest(http.MethodGet, uri, nil)
-	request.Header = asol.Header()
 
 	if err != nil {
 		return nil, err
 	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
 
 	return request, nil
 }
@@ -100,11 +98,13 @@ func (asol *Asol) Post(uri string, data map[string]interface{}) (*http.Request, 
 	}
 
 	request, err := http.NewRequest(http.MethodPost, uri, buffer)
-	request.Header = asol.Header()
 
 	if err != nil {
 		return nil, err
 	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
 
 	return request, nil
 }
@@ -122,11 +122,13 @@ func (asol *Asol) Patch(uri string, data map[string]interface{}) (*http.Request,
 	}
 
 	request, err := http.NewRequest(http.MethodPatch, uri, buffer)
-	request.Header = asol.Header()
 
 	if err != nil {
 		return nil, err
 	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
 
 	return request, nil
 }
@@ -144,11 +146,13 @@ func (asol *Asol) Put(uri string, data map[string]interface{}) (*http.Request, e
 	}
 
 	request, err := http.NewRequest(http.MethodPut, uri, buffer)
-	request.Header = asol.Header()
 
 	if err != nil {
 		return nil, err
 	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
 
 	return request, nil
 }
@@ -159,38 +163,26 @@ func (asol *Asol) Delete(uri string) (*http.Request, error) {
 	}
 
 	request, err := http.NewRequest(http.MethodDelete, uri, nil)
-	request.Header = asol.Header()
 
 	if err != nil {
 		return nil, err
 	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
 
 	return request, nil
 }
 
-func (asol *Asol) WebRequest(request *http.Request) (interface{}, error) {
-	asol.Client.setInsecureSkipVerify(false)
-	response, err := asol.Client.Do(request)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer response.Body.Close()
-
-	var data interface{}
-
-	json.NewDecoder(response.Body).Decode(&data)
-	return data, err
-}
-
 func (asol *Asol) RiotRequest(request *http.Request) ([]byte, error) {
-	asol.Client.setInsecureSkipVerify(true)
+	asol.HTTPClient.setInsecureSkipVerify(true)
 
-	authorization := asol.Authorization()
-	request.Header.Set("Authorization", "Basic "+authorization)
+	request.Header.Set(
+		"Authorization",
+		"Basic "+asol.Authorization(),
+	)
 
-	response, err := asol.Client.Do(request)
+	response, err := asol.HTTPClient.Do(request)
 
 	if err != nil {
 		return nil, err
@@ -205,9 +197,9 @@ func (asol *Asol) RiotRequest(request *http.Request) ([]byte, error) {
 	return bytes, err
 }
 
-func (asol *Asol) RawWebRequest(request *http.Request) ([]byte, error) {
-	asol.Client.setInsecureSkipVerify(false)
-	response, err := asol.Client.Do(request)
+func (asol *Asol) WebRequest(request *http.Request) ([]byte, error) {
+	asol.HTTPClient.setInsecureSkipVerify(false)
+	response, err := asol.HTTPClient.Do(request)
 
 	if err != nil {
 		return nil, err

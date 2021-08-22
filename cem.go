@@ -1,18 +1,18 @@
 package asol
 
 type (
-	EventCallback  func(*Asol)
+	EventCallback  func()
 	WebsocketError func(error)
 
 	ConnectionEventManager struct {
-		onOpen           func(*Asol)
-		onReady          func(*Asol)
-		onLogin          func(*Asol)
-		onLogout         func(*Asol)
-		onClientClose    func(*Asol)
-		onWebsocketClose func(*Asol)
-		onReconnect      func(*Asol)
-		onWebsocketError func(error)
+		onOpen           EventCallback
+		onReady          EventCallback
+		onLogin          EventCallback
+		onLogout         EventCallback
+		onClientClose    EventCallback
+		onWebsocketClose EventCallback
+		onReconnect      EventCallback
+		onWebsocketError WebsocketError
 	}
 )
 

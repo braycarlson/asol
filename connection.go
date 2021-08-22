@@ -96,11 +96,11 @@ func (asol *Asol) Start() {
 			break
 		}
 
-		asol.onOpen(asol)
+		asol.onOpen()
 		asol.isReady()
-		asol.onReady(asol)
+		asol.onReady()
 		asol.isLoggedIn()
-		asol.onLogin(asol)
+		asol.onLogin()
 
 		var path string = asol.Path()
 		asol.listen()
@@ -125,7 +125,7 @@ func (asol *Asol) Start() {
 			case logout := <-outer:
 				switch logout {
 				case true:
-					asol.onLogout(asol)
+					asol.onLogout()
 
 					inner := make(chan bool, 1)
 
@@ -152,7 +152,7 @@ func (asol *Asol) Start() {
 			}
 
 			if closed {
-				asol.onClientClose(asol)
+				asol.onClientClose()
 				asol.respawn(path)
 			}
 
@@ -165,7 +165,7 @@ func (asol *Asol) Start() {
 		}
 
 		asol.refresh()
-		asol.onReconnect(asol)
+		asol.onReconnect()
 	}
 }
 
@@ -230,7 +230,7 @@ func (asol *Asol) read() {
 			)
 
 			if websocket.IsUnexpectedCloseError(err) {
-				asol.onWebsocketClose(asol)
+				asol.onWebsocketClose()
 			}
 
 			break

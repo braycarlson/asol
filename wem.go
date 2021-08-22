@@ -2,6 +2,7 @@ package asol
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 type (
 	MessageType float64
 
-	WebsocketCallback func(*Asol, []byte)
+	WebsocketCallback func([]byte)
 
 	Message struct {
 		URI    string
@@ -65,8 +66,15 @@ func (asol *Asol) Match(message *Message) {
 	for _, listener := range asol.registered {
 		if message.URI == listener["uri"] && message.Method == listener["method"] {
 			callback := listener["callback"].(WebsocketCallback)
-			response, _ := json.Marshal(message.Data)
-			callback(asol, response)
+			response, err := json.Marshal(message.Data)
+
+			if err != nil {
+				asol.onWebsocketError(
+					fmt.Errorf("%v", err),
+				)
+			}
+
+			callback(response)
 		}
 	}
 }

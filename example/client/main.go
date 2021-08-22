@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/braycarlson/asol"
 )
@@ -22,44 +22,44 @@ var (
 	}
 )
 
-func onOpen(asol *asol.Asol) {
-	fmt.Println("The client is opened")
+func onOpen() {
+	log.Println("The client is opened")
 }
 
-func onReady(asol *asol.Asol) {
-	fmt.Println("The client is ready")
+func onReady() {
+	log.Println("The client is ready")
 }
 
-func onLogin(asol *asol.Asol) {
-	fmt.Println("The client is logged in")
+func onLogin() {
+	log.Println("The client is logged in")
 }
 
-func onLogout(asol *asol.Asol) {
-	fmt.Println("The client is logged out")
+func onLogout() {
+	log.Println("The client is logged out")
 }
 
-func onClientClose(asol *asol.Asol) {
-	fmt.Println("The client is closed")
+func onClientClose() {
+	log.Println("The client is closed")
 }
 
-func onWebsocketClose(asol *asol.Asol) {
-	fmt.Println("The client's websocket closed")
+func onWebsocketClose() {
+	log.Println("The client's websocket closed")
 }
 
-func onReconnect(asol *asol.Asol) {
-	fmt.Println("The client is reconnected")
+func onReconnect() {
+	log.Println("The client is reconnected")
 }
 
 func onWebsocketError(error error) {
-	fmt.Println(error)
+	log.Println(error)
 }
 
-func onCollection(asol *asol.Asol, message []byte) {
-	fmt.Println(message)
+func onCollection(message []byte) {
+	log.Println(string(message))
 }
 
-func onGame(asol *asol.Asol, message []byte) {
-	fmt.Println(message)
+func onGame(message []byte) {
+	log.Println(message)
 }
 
 func main() {

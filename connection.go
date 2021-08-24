@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -14,15 +15,21 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Asol struct {
-	Connection *websocket.Conn
-	*GameProcess
-	*HTTPClient
-	*ConnectionEventManager
-	*WebsocketEventManager
-	mutex     *sync.Mutex
-	reconnect bool
-}
+type (
+	Asol struct {
+		Connection *websocket.Conn
+		*GameProcess
+		*HTTPClient
+		*ConnectionEventManager
+		*WebsocketEventManager
+		mutex     *sync.Mutex
+		reconnect bool
+	}
+
+	RespawnError struct {
+		Path string
+	}
+)
 
 func NewAsol() *Asol {
 	return &Asol{
@@ -40,12 +47,9 @@ func (asol *Asol) refresh() {
 	asol.GameProcess = NewGameProcess()
 }
 
-func (asol *Asol) respawn(path string) {
+func (asol *Asol) respawn(path string) error {
 	err := exec.Command(path).Start()
-
-	if err != nil {
-		return
-	}
+	return err
 }
 
 func (asol *Asol) isReady() {
@@ -115,7 +119,7 @@ func (asol *Asol) Start() {
 
 			outer := make(chan bool, 1)
 
-			IsGameOrClient(
+			IsLoginOrClient(
 				outer,
 				"RiotClientUx.exe",
 				"RiotClientServices.exe",
@@ -222,6 +226,7 @@ func (asol *Asol) read() {
 
 		if err != nil {
 			if err == io.ErrUnexpectedEOF {
+				log.Println("HERE")
 				continue
 			}
 

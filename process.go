@@ -115,6 +115,70 @@ func GetProcessIndefinitely(application string) (*process.Process, error) {
 	return nil, &ProcessNotFoundError{application}
 }
 
+func IsLoginOrClient(channel chan bool, game string, client string) {
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	ctx, cancel := context.WithCancel(
+		context.Background(),
+	)
+
+	go func() {
+		defer wg.Done()
+
+		for {
+			if len(channel) == cap(channel) {
+				break
+			}
+
+			process, err := GetProcess(game)
+
+			if process != nil || err != nil {
+				channel <- true
+				break
+			}
+
+			time.Sleep(1000 * time.Millisecond)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		for {
+			if len(channel) == cap(channel) {
+				break
+			}
+
+			process, err := GetProcess(client)
+
+			if process == nil || err != nil {
+				channel <- false
+				break
+			}
+
+			time.Sleep(1000 * time.Millisecond)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		cancel()
+	}()
+
+	wg.Wait()
+}
+
 func IsGameOrClient(channel chan bool, game string, client string) {
 	var wg sync.WaitGroup
 	wg.Add(3)

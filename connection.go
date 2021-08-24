@@ -226,7 +226,6 @@ func (asol *Asol) read() {
 
 		if err != nil {
 			if err == io.ErrUnexpectedEOF {
-				log.Println("HERE")
 				continue
 			}
 

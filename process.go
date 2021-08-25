@@ -3,6 +3,7 @@ package asol
 import (
 	"context"
 	"encoding/csv"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -11,18 +12,24 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-type GameProcess struct {
-	process   *process.Process
-	name      string
-	app       string
-	region    string
-	username  string
-	password  string
-	pid       string
-	port      string
-	directory string
-	respawn   string
-}
+type (
+	GameProcess struct {
+		process   *process.Process
+		name      string
+		app       string
+		region    string
+		username  string
+		password  string
+		pid       string
+		port      string
+		directory string
+		respawn   string
+	}
+
+	ProcessNotFoundError struct {
+		Process string
+	}
+)
 
 func NewGameProcess() *GameProcess {
 	process, _ := GetProcessIndefinitely("LeagueClientUx.exe")
@@ -40,6 +47,10 @@ func NewGameProcess() *GameProcess {
 		directory: flags["install-directory"],
 		respawn:   flags["respawn-command"],
 	}
+}
+
+func (error *ProcessNotFoundError) Error() string {
+	return fmt.Sprintf("%s could not be found", error.Process)
 }
 
 func (game *GameProcess) Username() string {

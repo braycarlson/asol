@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -26,8 +25,19 @@ type (
 		reconnect bool
 	}
 
-	RespawnError struct {
-		Path string
+	Login struct {
+		AccountId      float64
+		Connected      bool
+		Error          bool
+		GasToken       string
+		IdToken        string
+		IsInLoginQueue bool
+		IsNewPlayer    bool
+		Puuid          string
+		State          string
+		SummonerId     float64
+		UserAuthToken  string
+		Username       string
 	}
 )
 
@@ -77,13 +87,8 @@ func (asol *Asol) isLoggedIn() {
 		var login Login
 		json.Unmarshal(data, &login)
 
-		connected := login.Connected
-		state := strings.ToLower(login.State)
-		accountId := login.AccountId
-		summonerId := login.SummonerId
-
-		if connected && state == "succeeded" &&
-			accountId != 0 && summonerId != 0 {
+		if login.Connected && strings.ToLower(login.State) == "succeeded" &&
+			login.AccountId != 0 && login.SummonerId != 0 {
 			break
 		}
 
@@ -106,7 +111,8 @@ func (asol *Asol) Start() {
 		asol.isLoggedIn()
 		asol.onLogin()
 
-		var path string = asol.Path()
+		path := asol.Path()
+
 		asol.listen()
 
 		if asol.reconnect == false {
@@ -114,8 +120,7 @@ func (asol *Asol) Start() {
 		}
 
 		for {
-			closed := false
-			game := false
+			var closed, opened bool
 
 			outer := make(chan bool, 1)
 
@@ -143,7 +148,7 @@ func (asol *Asol) Start() {
 					case login := <-inner:
 						switch login {
 						case true:
-							game = true
+							opened = true
 						case false:
 							closed = true
 						}
@@ -160,7 +165,7 @@ func (asol *Asol) Start() {
 				asol.respawn(path)
 			}
 
-			if game {
+			if opened {
 				break
 			}
 
@@ -225,13 +230,13 @@ func (asol *Asol) read() {
 		err := asol.Connection.ReadJSON(&response)
 
 		if err != nil {
-			if err == io.ErrUnexpectedEOF {
-				continue
-			}
-
 			asol.onWebsocketError(
 				fmt.Errorf("%v", err),
 			)
+
+			if err == io.ErrUnexpectedEOF {
+				continue
+			}
 
 			if websocket.IsUnexpectedCloseError(err) {
 				asol.onWebsocketClose()
@@ -240,12 +245,18 @@ func (asol *Asol) read() {
 			break
 		}
 
-		asol.Match(
+		err = asol.Match(
 			&Message{
 				URI:    response.data["uri"].(string),
 				Method: response.data["eventType"].(string),
 				Data:   response.data,
 			},
 		)
+
+		if err != nil {
+			asol.onWebsocketError(
+				fmt.Errorf("%v", err),
+			)
+		}
 	}
 }

@@ -6,20 +6,18 @@ import (
 )
 
 const (
-	Welcome     MessageType = 0
-	Prefix      MessageType = 1
-	Call        MessageType = 2
-	CallResult  MessageType = 3
-	CallError   MessageType = 4
-	Subscribe   MessageType = 5
-	Unsubscribe MessageType = 6
-	Publish     MessageType = 7
-	Event       MessageType = 8
+	Welcome     float64 = 0
+	Prefix      float64 = 1
+	Call        float64 = 2
+	CallResult  float64 = 3
+	CallError   float64 = 4
+	Subscribe   float64 = 5
+	Unsubscribe float64 = 6
+	Publish     float64 = 7
+	Event       float64 = 8
 )
 
 type (
-	MessageType float64
-
 	WebsocketCallback func([]byte)
 
 	Message struct {
@@ -29,7 +27,7 @@ type (
 	}
 
 	Response struct {
-		messageType MessageType
+		messageType float64
 		event       string
 		data        map[string]interface{}
 	}
@@ -37,7 +35,13 @@ type (
 	WebsocketEventManager struct {
 		registered []map[string]interface{}
 	}
+
+	NoRegisteredEventError struct{}
 )
+
+func (error *NoRegisteredEventError) Error() string {
+	return fmt.Sprintf("No event(s) registered.")
+}
 
 func (wem *WebsocketEventManager) Registered() error {
 	if len(wem.registered) == 0 {
@@ -62,21 +66,21 @@ func (wem *WebsocketEventManager) OnMessage(uri string, method string, callback 
 	return callback
 }
 
-func (asol *Asol) Match(message *Message) {
+func (asol *Asol) Match(message *Message) error {
 	for _, listener := range asol.registered {
 		if message.URI == listener["uri"] && message.Method == listener["method"] {
 			callback := listener["callback"].(WebsocketCallback)
 			response, err := json.Marshal(message.Data)
 
 			if err != nil {
-				asol.onWebsocketError(
-					fmt.Errorf("%v", err),
-				)
+				return err
 			}
 
 			callback(response)
 		}
 	}
+
+	return nil
 }
 
 func (response *Response) UnmarshalJSON(message []byte) error {

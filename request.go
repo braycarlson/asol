@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -16,6 +17,11 @@ import (
 type (
 	HTTPClient struct {
 		*http.Client
+	}
+
+	ClientError struct {
+		message string
+		error   error
 	}
 )
 
@@ -42,6 +48,10 @@ func NewHTTPClient() *HTTPClient {
 			Transport: transport,
 		},
 	}
+}
+
+func (error *ClientError) Error() string {
+	return fmt.Sprintf("%s: %v", error.message, error.error)
 }
 
 func (client *HTTPClient) setInsecureSkipVerify(insecureSkipVerify bool) {
@@ -185,7 +195,7 @@ func (asol *Asol) RiotRequest(request *http.Request) ([]byte, error) {
 	response, err := asol.HTTPClient.Do(request)
 
 	if err != nil {
-		return nil, err
+		return nil, &ClientError{"RiotRequest", err}
 	}
 
 	defer response.Body.Close()
@@ -202,7 +212,7 @@ func (asol *Asol) WebRequest(request *http.Request) ([]byte, error) {
 	response, err := asol.HTTPClient.Do(request)
 
 	if err != nil {
-		return nil, err
+		return nil, &ClientError{"WebRequest", err}
 	}
 
 	defer response.Body.Close()

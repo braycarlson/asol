@@ -59,7 +59,7 @@ func onCollection(message []byte) {
 }
 
 func onGame(message []byte) {
-	log.Println(message)
+	log.Println(string(message))
 }
 
 func main() {

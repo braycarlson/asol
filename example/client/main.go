@@ -16,72 +16,70 @@ func NewClient() *Client {
 	}
 }
 
-var (
-	client = &Client{
-		asol.NewAsol(),
-	}
-)
+func (client *Client) onSearch() {
+	log.Println("The client is searching")
+}
 
-func onOpen() {
+func (client *Client) onOpen() {
 	log.Println("The client is opened")
 }
 
-func onReady() {
+func (client *Client) onReady() {
 	log.Println("The client is ready")
 }
 
-func onLogin() {
+func (client *Client) onLogin() {
 	log.Println("The client is logged in")
 }
 
-func onLogout() {
-	log.Println("The client is logged out")
-}
-
-func onClientClose() {
-	log.Println("The client is closed")
-}
-
-func onWebsocketClose() {
+func (client *Client) onWebsocketClose() {
 	log.Println("The client's websocket closed")
 }
 
-func onReconnect() {
-	log.Println("The client is reconnected")
-}
-
-func onWebsocketError(error error) {
+func (client *Client) onProcessError(error error) {
 	log.Println(error)
 }
 
-func onCollection(message []byte) {
+func (client *Client) onSearchError(error error) {
+	log.Println(error)
+}
+
+func (client *Client) onWebsocketError(error error) {
+	log.Println(error)
+}
+
+func (client *Client) onCollection(message []byte) {
 	log.Println(string(message))
 }
 
-func onGame(message []byte) {
+func (client *Client) onGame(message []byte) {
 	log.Println(string(message))
 }
 
 func main() {
-	client.OnOpen(onOpen)
-	client.OnReady(onReady)
-	client.OnLogin(onLogin)
-	client.OnLogout(onLogout)
-	client.OnClientClose(onClientClose)
-	client.OnWebsocketClose(onWebsocketClose)
-	client.OnReconnect(onReconnect)
-	client.OnWebsocketError(onWebsocketError)
+	client := &Client{
+		asol.NewAsol(),
+	}
+
+	client.OnSearch(client.onSearch)
+	client.OnOpen(client.onOpen)
+	client.OnReady(client.onReady)
+	client.OnLogin(client.onLogin)
+	client.OnProcessError(client.onProcessError)
+	client.OnSearchError(client.onSearchError)
+	client.OnWebsocketClose(client.onWebsocketClose)
+	client.OnWebsocketError(client.onWebsocketError)
 
 	client.OnMessage(
 		"/lol-settings/v1/account/lol-collection-champions",
 		"Update",
-		onCollection,
+		client.onCollection,
 	)
 
 	client.OnMessage(
 		"/lol-champ-select/v1/asol",
 		"Update",
-		onGame,
+		client.onGame,
 	)
 
 	client.Start()

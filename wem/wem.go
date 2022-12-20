@@ -1,4 +1,4 @@
-package asol
+package wem
 
 import (
 	"encoding/json"
@@ -27,9 +27,9 @@ type (
 	}
 
 	Response struct {
-		messageType float64
-		event       string
-		data        map[string]interface{}
+		MessageType float64
+		Event       string
+		Data        map[string]interface{}
 	}
 
 	WebsocketEventManager struct {
@@ -55,19 +55,8 @@ func (wem *WebsocketEventManager) setRegistered(event map[string]interface{}) {
 	wem.registered = append(wem.registered, event)
 }
 
-func (wem *WebsocketEventManager) OnMessage(uri string, method string, callback WebsocketCallback) WebsocketCallback {
-	event := map[string]interface{}{
-		"uri":      uri,
-		"method":   method,
-		"callback": callback,
-	}
-
-	wem.setRegistered(event)
-	return callback
-}
-
-func (asol *Asol) Match(message *Message) error {
-	for _, listener := range asol.registered {
+func (wem *WebsocketEventManager) Match(message *Message) error {
+	for _, listener := range wem.registered {
 		if message.URI == listener["uri"] && message.Method == listener["method"] {
 			callback := listener["callback"].(WebsocketCallback)
 			response, err := json.Marshal(message.Data)
@@ -83,12 +72,23 @@ func (asol *Asol) Match(message *Message) error {
 	return nil
 }
 
+func (wem *WebsocketEventManager) OnMessage(uri string, method string, callback WebsocketCallback) WebsocketCallback {
+	event := map[string]interface{}{
+		"uri":      uri,
+		"method":   method,
+		"callback": callback,
+	}
+
+	wem.setRegistered(event)
+	return callback
+}
+
 func (response *Response) UnmarshalJSON(message []byte) error {
 	return json.Unmarshal(
 		message,
 		&[]interface{}{
-			&response.messageType,
-			&response.event,
-			&response.data,
+			&response.MessageType,
+			&response.Event,
+			&response.Data,
 		})
 }
